@@ -138,13 +138,13 @@ int main(int argc, char **argv){
         struct Obstacle* current = firstObstacle;
         do {
             struct Obstacle* nextObstacle = current->next; // Save the next node before potential deletion
-            fprintf(stderr, "Next OB ID: %d\n", nextObstacle->ID);
+            //fprintf(stderr, "Next OB ID: %d\n", nextObstacle->ID);
             current->X -= 3; // Move the obstacle
             //fprintf(stderr, "current ID: %d, X: %d\n", current->ID, current->X);
         
             if (current->X <= 0) { // If the obstacle is off the screen
                 //fprintf(stderr, "DELETING obstacle ID: %d\n", current->ID);
-                int temp_Y=0;
+                int temp_Y;
                 NF_DeleteSprite(1, current->ID); // Delete the sprite
         
                 // Determine the new obstacle's Y position
@@ -155,7 +155,6 @@ int main(int argc, char **argv){
                 }
         
                 // Delete the current obstacle from the list
-                //⚠️Should be deleteing the first 2 obstacles and creating 2 new ones
                 firstObstacle = deleteObstacle(firstObstacle, current);
                 
                 // Create a new obstacle
@@ -164,7 +163,6 @@ int main(int argc, char **argv){
                 lastObstacle = insertEnd(lastObstacle, SCREEN_WIDTH, temp_Y, temp_frame);
                 NF_CreateSprite(1, lastObstacle->ID, 1, 1, SCREEN_WIDTH, temp_Y);
                 NF_SpriteFrame(1,lastObstacle->ID,lastObstacle->Frame);
-               // fprintf(stderr, "Last obstacle ID: %d\n", lastObstacle->ID);
                 roundCounter++;
             }else{
                 NF_MoveSprite(1,current->ID, current->X, current->Y);
@@ -175,23 +173,23 @@ int main(int argc, char **argv){
             //fprintf(stderr, "roundCounter: %d\n", roundCounter);
         } while (firstObstacle != NULL && current != firstObstacle);
         
-        // fprintf(stderr, "position: %d\n\n", Y);
-
+        
         /*Check for collision to End Game*/
         //if starmans (Xrange,Yrange) are in the range of either planet, then end game
         //⚠️⚠️⚠️TODO: currently only checking if theres a collision with top obstacle this
         // need to include bottom obstacle
         //should look like ((X collision)&&(Y top collision || YBottom Collision))
-        if((StarMan.X+32>firstObstacle->X && StarMan.X<firstObstacle->X+32)
-           // &&((StarMan.Y<firstObstacle->Y+32 && StarMan.Y+32>firstObstacle->Y)
-            &&(StarMan.Y<firstObstacle->next->Y+32 && StarMan.Y+32>firstObstacle->next->Y)){
-            fprintf(stderr, "TOP COLLISION: GAME END");
+        //if((StarMan.X+32>firstObstacle->X && StarMan.X<firstObstacle->X+32)
+        // &&((StarMan.Y<firstObstacle->Y+32 && StarMan.Y+32>firstObstacle->Y)
+        if((StarMan.X+32>firstObstacle->X && StarMan.X<firstObstacle->X+32) && (StarMan.Y<firstObstacle->next->Y+32 && StarMan.Y+32>firstObstacle->next->Y)){
+            // fprintf(stderr, "position: %d\n\n", Y);
+            fprintf(stderr, "BOTTOM COLLISION: %d == %d\n FRAM: %d\n", StarMan.Y, firstObstacle->next->Y, firstObstacle->next->Frame);
+            
         }
 
         StarMan.Y=Y;
         NF_MoveSprite(1,StarMan.ID, X, StarMan.Y);
         StarMan.Frame = !StarMan.Frame;
-        //fprintf(stderr, "frame: %d\n", StarMan.Frame);
         NF_SpriteFrame(1,StarMan.ID,StarMan.Frame);
         NF_SpriteOamSet(1); //update NFLib's sprite OAM system
         swiWaitForVBlank(); //wait for vertical blank
