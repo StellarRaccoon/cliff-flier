@@ -53,7 +53,6 @@ int main(int argc, char **argv){
     /*Load Background and Sprites*/
 
     //load Background into RAM
-    //NF_LoadTiledBg("bg/TicTacToeTop", "TicTacToeTop", 256,256);
     NF_LoadTiledBg("bg/night_mounts", "bottomBG",256,256);
     //load sprites into RAM
     NF_LoadSpriteGfx("sp/star_guy_frame", 0,STARMAN_HEIGHT,STARMAN_HEIGHT); //load sprites for circle, cross, and blank
@@ -62,7 +61,6 @@ int main(int argc, char **argv){
     NF_LoadSpritePal("sp/planets",1);
 
     //Copy backround into VRAM
-    //NF_CreateTiledBg(0,0,"TicTacToeTop");
     NF_CreateTiledBg(1,0,"bottomBG");
     //copy sprites into VRAM for bottom screen
     NF_VramSpriteGfx(1,0,0,false); 
@@ -83,7 +81,6 @@ int main(int argc, char **argv){
     StarMan.Frame=0; //frame is unclaimed
 
     /* Inital Obstacle Creation */
-  /* Initial Obstacle Creation */
     ID = 0;
     int gap_y = STARMAN_HEIGHT * 2; // Initial gap is in the middle of the screen (2x height of player)
     int obstacleHeight = 32;
@@ -106,6 +103,8 @@ int main(int argc, char **argv){
     const u8 acceleration=1; //added to the velocity every frame for fall
     int roundCounter=0;
     srand(time(NULL) + roundCounter);
+
+    /*Per Frame*/
     while(1){
         scanKeys();
         
@@ -113,7 +112,7 @@ int main(int argc, char **argv){
         if (KEY_A & keysDownRepeat())
         {
             velocity=-10;
-            fprintf(stderr, "Down Press\n");
+            //fprintf(stderr, "Down Press\n");
         }
         else{ //if player is not bounced, they should fall
             velocity+=acceleration;
@@ -137,14 +136,14 @@ int main(int argc, char **argv){
         /* move all obstacle by 3 px*/
         gap_y = rand() % ((STARMAN_HEIGHT*2) - (STARMAN_HEIGHT+4) + 1)+ (STARMAN_HEIGHT+4); //randomize the gap: starman height +8<gap<2*starman height
         struct Obstacle* current = firstObstacle;
-        //struct Obstacle* prev = firstObstacle;
         do {
             struct Obstacle* nextObstacle = current->next; // Save the next node before potential deletion
+            fprintf(stderr, "Next OB ID: %d\n", nextObstacle->ID);
             current->X -= 3; // Move the obstacle
-            fprintf(stderr, "current ID: %d, X: %d\n", current->ID, current->X);
+            //fprintf(stderr, "current ID: %d, X: %d\n", current->ID, current->X);
         
             if (current->X <= 0) { // If the obstacle is off the screen
-                fprintf(stderr, "DELETING obstacle ID: %d\n", current->ID);
+                //fprintf(stderr, "DELETING obstacle ID: %d\n", current->ID);
                 int temp_Y=0;
                 NF_DeleteSprite(1, current->ID); // Delete the sprite
         
@@ -156,13 +155,16 @@ int main(int argc, char **argv){
                 }
         
                 // Delete the current obstacle from the list
+                //⚠️Should be deleteing the first 2 obstacles and creating 2 new ones
                 firstObstacle = deleteObstacle(firstObstacle, current);
-        
+                
                 // Create a new obstacle
                 int temp_frame = rand() % (3 + 1);
+                
                 lastObstacle = insertEnd(lastObstacle, SCREEN_WIDTH, temp_Y, temp_frame);
                 NF_CreateSprite(1, lastObstacle->ID, 1, 1, SCREEN_WIDTH, temp_Y);
                 NF_SpriteFrame(1,lastObstacle->ID,lastObstacle->Frame);
+               // fprintf(stderr, "Last obstacle ID: %d\n", lastObstacle->ID);
                 roundCounter++;
             }else{
                 NF_MoveSprite(1,current->ID, current->X, current->Y);
@@ -170,15 +172,26 @@ int main(int argc, char **argv){
         
             current = nextObstacle; // Move to the next obstacle
         
-            fprintf(stderr, "roundCounter: %d\n", roundCounter);
+            //fprintf(stderr, "roundCounter: %d\n", roundCounter);
         } while (firstObstacle != NULL && current != firstObstacle);
         
         // fprintf(stderr, "position: %d\n\n", Y);
 
+        /*Check for collision to End Game*/
+        //if starmans (Xrange,Yrange) are in the range of either planet, then end game
+        //⚠️⚠️⚠️TODO: currently only checking if theres a collision with top obstacle this
+        // need to include bottom obstacle
+        //should look like ((X collision)&&(Y top collision || YBottom Collision))
+        if((StarMan.X+32>firstObstacle->X && StarMan.X<firstObstacle->X+32)
+           // &&((StarMan.Y<firstObstacle->Y+32 && StarMan.Y+32>firstObstacle->Y)
+            &&(StarMan.Y<firstObstacle->next->Y+32 && StarMan.Y+32>firstObstacle->next->Y)){
+            fprintf(stderr, "TOP COLLISION: GAME END");
+        }
+
         StarMan.Y=Y;
         NF_MoveSprite(1,StarMan.ID, X, StarMan.Y);
         StarMan.Frame = !StarMan.Frame;
-        fprintf(stderr, "frame: %d\n", StarMan.Frame);
+        //fprintf(stderr, "frame: %d\n", StarMan.Frame);
         NF_SpriteFrame(1,StarMan.ID,StarMan.Frame);
         NF_SpriteOamSet(1); //update NFLib's sprite OAM system
         swiWaitForVBlank(); //wait for vertical blank
